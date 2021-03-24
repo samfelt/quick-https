@@ -5,6 +5,7 @@ def main():
     interface = 'localhost'
     port = 8080
     httpd = TCPServer((interface,port),SimpleHTTPRequestHandler)
+    l = True
     try:
         print(f"Serving HTTP on {interface}, port {port}...")
         httpd.serve_forever()
