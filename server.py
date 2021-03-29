@@ -1,10 +1,9 @@
 from http.server import SimpleHTTPRequestHandler
 from socketserver import TCPServer
-import ssl
 
 
 def main():
-    interface = 'localhost'
+    interface = "localhost"
     port = 8080
     httpd = TCPServer((interface, port), SimpleHTTPRequestHandler)
     try:
@@ -15,5 +14,5 @@ def main():
         httpd.server_close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
