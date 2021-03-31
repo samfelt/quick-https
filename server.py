@@ -3,6 +3,7 @@ import ssl
 from http.server import SimpleHTTPRequestHandler
 from socketserver import TCPServer
 
+VERBOSE = False
 CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:\
            ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:\
            DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:\
@@ -12,6 +13,14 @@ CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:\
            ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:\
            DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:\
            DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK"
+
+
+def verbose_print(msg, suppress=False):
+    if VERBOSE:
+        if suppress:
+            print(f"    {msg}")
+        else:
+            print(f"[+] {msg}")
 
 
 def parse_args():
@@ -56,8 +65,18 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.verbose:
+        global VERBOSE
+        VERBOSE = True
+        verbose_print("Verbose out enabled")
+        verbose_print("-------------------", True)
     interface = args.interface
     port = args.port
+    verbose_print(f"Interface: {interface}")
+    verbose_print(f"Port:      {port}")
+    verbose_print(f"Key:       {args.key_file}")
+    verbose_print(f"Cert:      {args.cert_file}")
+    verbose_print("\n", True)
     httpd = TCPServer((interface, port), SimpleHTTPRequestHandler)
     httpd.socket = ssl.wrap_socket(
         httpd.socket,
