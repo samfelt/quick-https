@@ -3,7 +3,6 @@ import ssl
 from http.server import SimpleHTTPRequestHandler
 from socketserver import TCPServer
 
-KEY_DIR = "keys"
 CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:\
            ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:\
            DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:\
@@ -34,6 +33,22 @@ def parse_args():
         help="Port to liston on",
     )
     parser.add_argument(
+        "--key-file",
+        "-k",
+        type=str,
+        default="example_cert/keyfile.key",
+        action="store",
+        help="Keyfile",
+    )
+    parser.add_argument(
+        "--cert-file",
+        "-c",
+        type=str,
+        default="example_cert/certfile.crt",
+        action="store",
+        help="Certfile",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Print extra info"
     )
     return parser.parse_args()
@@ -46,8 +61,8 @@ def main():
     httpd = TCPServer((interface, port), SimpleHTTPRequestHandler)
     httpd.socket = ssl.wrap_socket(
         httpd.socket,
-        keyfile=f"{KEY_DIR}/keyfile.key",
-        certfile=f"{KEY_DIR}/certfile.crt",
+        keyfile=args.key_file,
+        certfile=args.cert_file,
         server_side=True,
         ssl_version=ssl.PROTOCOL_TLSv1_2,
         ca_certs=None,

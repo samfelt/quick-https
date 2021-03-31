@@ -1,5 +1,4 @@
 .coverage
-keys/
 .pre-commit-config.yaml
 *.swp
 .venv/
