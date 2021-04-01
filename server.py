@@ -1,4 +1,5 @@
 import argparse
+import os
 import random
 import ssl
 from datetime import datetime, timedelta
@@ -12,6 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 VERBOSE = False
+REPO_DIR = os.path.dirname(os.path.realpath(__file__))
 CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:\
            ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:\
            DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:\
@@ -134,9 +136,9 @@ def main():
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
     )
-    with open("certs/certfile.crt", "wb") as f:
+    with open(f"{REPO_DIR}/certs/certfile.crt", "wb") as f:
         f.write(cert_pem)
-    with open("certs/keyfile.key", "wb") as f:
+    with open(f"{REPO_DIR}/certs/keyfile.key", "wb") as f:
         f.write(key_pem)
 
     verbose_print(f"Interface: {interface}")
@@ -148,8 +150,8 @@ def main():
     httpd = TCPServer((interface, port), SimpleHTTPRequestHandler)
     httpd.socket = ssl.wrap_socket(
         httpd.socket,
-        keyfile="certs/keyfile.key",
-        certfile="certs/certfile.crt",
+        keyfile=f"{REPO_DIR}/certs/keyfile.key",
+        certfile=f"{REPO_DIR}/certs/certfile.crt",
         server_side=True,
         ssl_version=ssl.PROTOCOL_TLSv1_2,
         ca_certs=None,
