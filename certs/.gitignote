@@ -1,0 +1,3 @@
+# Generated certificates will go in here, we don't want to track those
+*
+!.gitignore
