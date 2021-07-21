@@ -14,6 +14,8 @@ from cryptography.x509.oid import NameOID
 
 VERBOSE = False
 REPO_DIR = os.path.dirname(os.path.realpath(__file__))
+DEFAULT_CERT = f"{REPO_DIR}/certs/certfile.crt"
+DEFAULT_KEY = f"{REPO_DIR}/certs/keyfile.key"
 CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:\
            ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:\
            DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:\
@@ -31,6 +33,16 @@ def verbose_print(msg, suppress=False):
             print(f"    {msg}")
         else:
             print(f"[+] {msg}")
+
+
+def prompt_yn(msg):
+    while "Not a valid answer":
+        ans = str(input(f"{msg}(y/n) ")).lower().strip()
+        if ans[:1] == "y":
+            return True
+        elif ans[:1] == "n":
+            return False
+        print(f"'{ans}' is not a valid response")
 
 
 def generate_self_signed_cert():
@@ -66,6 +78,33 @@ def generate_self_signed_cert():
     return key, cert
 
 
+def write_cert(key, key_file, cert, cert_file):
+    cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
+    key_pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    with open(cert_file, "wb") as f:
+        f.write(cert_pem)
+    with open(key_file, "wb") as f:
+        f.write(key_pem)
+
+
+def read_cert(key_file, cert_file):
+    with open(cert_file, "rb") as f:
+        cert_pem = f.read()
+        cert = x509.load_pem_x509_certificate(cert_pem, default_backend())
+
+    with open(key_file, "rb") as f:
+        key_pem = f.read()
+        key = serialization.load_pem_private_key(
+            key_pem, None, default_backend()
+        )
+
+    return key, cert
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -84,16 +123,16 @@ def parse_args():
         action="store",
         help="Port to liston on",
     )
-    """
-    Removing key file arguments to generate a new key every time.
-    These can be added back in the future
-
     parser.add_argument(
         "--generate",
         "-g",
         action="store_true",
         help="Generate a new self-signed cert to use",
     )
+    """
+    Removing key file arguments to generate a new key every time.
+    These can be added back in the future
+
     parser.add_argument(
         "--key-file",
         "-k",
@@ -129,17 +168,23 @@ def main():
     interface = args.interface
     port = args.port
 
-    key, cert = generate_self_signed_cert()
-    cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
-    key_pem = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    with open(f"{REPO_DIR}/certs/certfile.crt", "wb") as f:
-        f.write(cert_pem)
-    with open(f"{REPO_DIR}/certs/keyfile.key", "wb") as f:
-        f.write(key_pem)
+    if args.generate:
+        key, cert = generate_self_signed_cert()
+        write_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
+    else:
+        if not (os.path.isfile(DEFAULT_CERT) and os.path.isfile(DEFAULT_KEY)):
+            if prompt_yn(
+                "Cert/Key pair does not exist, do you want to generate one?"
+            ):
+                key, cert = generate_self_signed_cert()
+                write_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
+            else:
+                print("Certificate/Key pair required to run")
+                print("Generate a self-signed cert with '--generate'")
+                print("Or specificy cert and key to use")
+                quit(1)
+        else:
+            key, cert = read_cert(DEFAULT_KEY, DEFAULT_CERT)
 
     verbose_print(f"Interface: {interface}")
     verbose_print(f"Port:      {port}")
