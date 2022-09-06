@@ -16,23 +16,14 @@ VERBOSE = False
 REPO_DIR = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_CERT = f"{REPO_DIR}/certs/certfile.crt"
 DEFAULT_KEY = f"{REPO_DIR}/certs/keyfile.key"
-CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:\
-           ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:\
-           DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:\
-           ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:\
-           ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:\
-           ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:\
-           ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:\
-           DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:\
-           DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK"
 
 
 def verbose_print(msg, suppress=False):
     if VERBOSE:
-        if suppress:
-            print(f"    {msg}")
-        else:
+        if not suppress:
             print(f"[+] {msg}")
+        else:
+            print(f"    {msg}")
 
 
 def prompt_yn(msg):
@@ -129,27 +120,6 @@ def parse_args():
         action="store_true",
         help="Generate a new self-signed cert to use",
     )
-    """
-    Removing key file arguments to generate a new key every time.
-    These can be added back in the future
-
-    parser.add_argument(
-        "--key-file",
-        "-k",
-        type=str,
-        default="example_cert/keyfile.key",
-        action="store",
-        help="Keyfile",
-    )
-    parser.add_argument(
-        "--cert-file",
-        "-c",
-        type=str,
-        default="example_cert/certfile.crt",
-        action="store",
-        help="Certfile",
-    )
-    """
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Print extra info"
     )
@@ -172,7 +142,9 @@ def main():
         key, cert = generate_self_signed_cert()
         write_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
     else:
-        if not (os.path.isfile(DEFAULT_CERT) and os.path.isfile(DEFAULT_KEY)):
+        if os.path.isfile(DEFAULT_CERT) and os.path.isfile(DEFAULT_KEY):
+            key, cert = read_cert(DEFAULT_KEY, DEFAULT_CERT)
+        else:
             if prompt_yn(
                 "Cert/Key pair does not exist, do you want to generate one?"
             ):
@@ -183,19 +155,18 @@ def main():
                 print("Generate a self-signed cert with '--generate'")
                 print("Or specificy cert and key to use")
                 quit(1)
-        else:
-            key, cert = read_cert(DEFAULT_KEY, DEFAULT_CERT)
 
+    verbose_print("-------------------------------------------------", True)
     verbose_print(f"Interface: {interface}")
     verbose_print(f"Port:      {port}")
     verbose_print(f"Key Size:  {key.public_key().key_size}")
     verbose_print(f"Cert:      {cert.fingerprint(hashes.SHA1()).hex(':',1)}")
-    verbose_print("\n", True)
+    verbose_print("-------------------------------------------------\n", True)
 
     ssl_ctx = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_SERVER)
     ssl_ctx.load_cert_chain(
-        certfile=f"{REPO_DIR}/certs/certfile.crt",
-        keyfile=f"{REPO_DIR}/certs/keyfile.key",
+        certfile=DEFAULT_CERT,
+        keyfile=DEFAULT_KEY,
     )
 
     httpd = HTTPSServer.HTTPSServer(
