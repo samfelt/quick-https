@@ -1,7 +1,6 @@
 import argparse
 import os
 import random
-import ssl
 from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler
 from https import HTTPSServer
@@ -163,16 +162,11 @@ def main():
     verbose_print(f"Cert:      {cert.fingerprint(hashes.SHA1()).hex(':',1)}")
     verbose_print("-------------------------------------------------\n", True)
 
-    ssl_ctx = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_SERVER)
-    ssl_ctx.load_cert_chain(
-        certfile=DEFAULT_CERT,
-        keyfile=DEFAULT_KEY,
-    )
-
     httpd = HTTPSServer.HTTPSServer(
         (interface, port),
         SimpleHTTPRequestHandler,
-        ssl_ctx,
+        DEFAULT_KEY,
+        DEFAULT_CERT,
     )
 
     try:
