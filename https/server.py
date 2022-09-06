@@ -1,15 +1,9 @@
 import argparse
-import os
-import random
-from datetime import datetime, timedelta
+from cryptography.hazmat.primitives import hashes
 from http.server import SimpleHTTPRequestHandler
 from https import HTTPSServer
+import os
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
 
 VERBOSE = False
 REPO_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -33,66 +27,6 @@ def prompt_yn(msg):
         elif ans[:1] == "n":
             return False
         print(f"'{ans}' is not a valid response")
-
-
-def generate_self_signed_cert():
-    server_ip = "127.0.0.1"
-    host_name = "ca_server"
-
-    key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend(),
-    )
-
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, host_name)])
-
-    alt_names = [x509.DNSName(host_name)]
-    alt_names.append(x509.DNSName(server_ip))
-
-    basic_constraints = x509.BasicConstraints(ca=True, path_length=0)
-    now = datetime.utcnow()
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(name)
-        .issuer_name(name)
-        .public_key(key.public_key())
-        .serial_number(random.getrandbits(159))
-        .not_valid_before(now)
-        .not_valid_after(now + timedelta(days=7))
-        .add_extension(basic_constraints, True)
-        .add_extension(x509.SubjectAlternativeName(alt_names), False)
-        .sign(key, hashes.SHA256(), default_backend())
-    )
-
-    return key, cert
-
-
-def write_cert(key, key_file, cert, cert_file):
-    cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
-    key_pem = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    with open(cert_file, "wb") as f:
-        f.write(cert_pem)
-    with open(key_file, "wb") as f:
-        f.write(key_pem)
-
-
-def read_cert(key_file, cert_file):
-    with open(cert_file, "rb") as f:
-        cert_pem = f.read()
-        cert = x509.load_pem_x509_certificate(cert_pem, default_backend())
-
-    with open(key_file, "rb") as f:
-        key_pem = f.read()
-        key = serialization.load_pem_private_key(
-            key_pem, None, default_backend()
-        )
-
-    return key, cert
 
 
 def parse_args():
@@ -131,6 +65,7 @@ def main():
     if args.verbose:
         global VERBOSE
         VERBOSE = True
+        verbose_print("-------------------", True)
         verbose_print("Verbose out enabled")
         verbose_print("-------------------", True)
 
@@ -138,17 +73,20 @@ def main():
     port = args.port
 
     if args.generate:
-        key, cert = generate_self_signed_cert()
-        write_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
+        verbose_print("Generating new self signed certificate")
+        key, cert = HTTPSServer.generate_self_signed_cert()
+        HTTPSServer.write_key_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
     else:
         if os.path.isfile(DEFAULT_CERT) and os.path.isfile(DEFAULT_KEY):
-            key, cert = read_cert(DEFAULT_KEY, DEFAULT_CERT)
+            key, cert = HTTPSServer.read_key_cert(DEFAULT_KEY, DEFAULT_CERT)
         else:
             if prompt_yn(
                 "Cert/Key pair does not exist, do you want to generate one?"
             ):
-                key, cert = generate_self_signed_cert()
-                write_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
+                key, cert = HTTPSServer.generate_self_signed_cert()
+                HTTPSServer.write_key_cert(
+                    key, DEFAULT_KEY, cert, DEFAULT_CERT
+                )
             else:
                 print("Certificate/Key pair required to run")
                 print("Generate a self-signed cert with '--generate'")
