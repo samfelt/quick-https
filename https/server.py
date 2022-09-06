@@ -31,6 +31,10 @@ def prompt_yn(msg):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    cert_group = parser.add_argument_group(
+        "Certificate Options",
+        "Generate a new cert or choose an existing cert to use",
+    )
     parser.add_argument(
         "--interface",
         "-i",
@@ -48,15 +52,43 @@ def parse_args():
         help="Port to liston on",
     )
     parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Print extra info"
+    )
+
+    cert_group.add_argument(
         "--generate",
         "-g",
         action="store_true",
         help="Generate a new self-signed cert to use",
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Print extra info"
+    cert_group.add_argument(
+        "--key",
+        "-k",
+        action="store",
+        help="File that holds key",
     )
-    return parser.parse_args()
+    cert_group.add_argument(
+        "--cert",
+        "-c",
+        action="store",
+        help="File that holds certificate",
+    )
+
+    args = parser.parse_args()
+
+    if args.generate and (args.key or args.cert):
+        parser.exit(1, "ERROR: --generate cannot be used with --key/--cert\n")
+
+    if (args.key or args.cert) and not (args.key and args.cert):
+        parser.exit(1, "ERROR: --key and --cert must be used together\n")
+
+    if args.key and not os.path.isfile(args.key):
+        parser.exit(1, f"ERROR: --key {args.key} does not exist\n")
+
+    if args.cert and not os.path.isfile(args.cert):
+        parser.exit(1, f"ERROR: --cert {args.cert} does not exist\n")
+
+    return args
 
 
 def main():
@@ -72,21 +104,26 @@ def main():
     interface = args.interface
     port = args.port
 
+    key_file = args.key if args.key else DEFAULT_KEY
+    cert_file = args.cert if args.key else DEFAULT_CERT
+
     if args.generate:
-        verbose_print("Generating new self signed certificate")
-        key, cert = HTTPSServer.generate_self_signed_cert()
-        HTTPSServer.write_key_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
+        if args.key or args.cert:
+            print("[WARN] Not generating new cert because '--key' or ")
+            print("       '--cert' option was given")
+        else:
+            verbose_print("Generating new self signed certificate")
+            key, cert = HTTPSServer.generate_self_signed_cert()
+            HTTPSServer.write_key_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
     else:
-        if os.path.isfile(DEFAULT_CERT) and os.path.isfile(DEFAULT_KEY):
-            key, cert = HTTPSServer.read_key_cert(DEFAULT_KEY, DEFAULT_CERT)
+        if os.path.isfile(cert_file) and os.path.isfile(key_file):
+            key, cert = HTTPSServer.read_key_cert(key_file, cert_file)
         else:
             if prompt_yn(
                 "Cert/Key pair does not exist, do you want to generate one?"
             ):
                 key, cert = HTTPSServer.generate_self_signed_cert()
-                HTTPSServer.write_key_cert(
-                    key, DEFAULT_KEY, cert, DEFAULT_CERT
-                )
+                HTTPSServer.write_key_cert(key, key_file, cert, cert_file)
             else:
                 print("Certificate/Key pair required to run")
                 print("Generate a self-signed cert with '--generate'")
@@ -103,8 +140,8 @@ def main():
     httpd = HTTPSServer.HTTPSServer(
         (interface, port),
         SimpleHTTPRequestHandler,
-        DEFAULT_KEY,
-        DEFAULT_CERT,
+        key_file,
+        cert_file,
     )
 
     try:
