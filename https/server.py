@@ -4,7 +4,7 @@ import random
 import ssl
 from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler
-from socketserver import TCPServer
+from https import HTTPSServer
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -198,12 +198,10 @@ def main():
         keyfile=f"{REPO_DIR}/certs/keyfile.key",
     )
 
-    httpd = TCPServer((interface, port), SimpleHTTPRequestHandler)
-    httpd.socket = ssl_ctx.wrap_socket(
-        sock=httpd.socket,
-        server_side=True,
-        do_handshake_on_connect=True,
-        suppress_ragged_eofs=True,
+    httpd = HTTPSServer.HTTPSServer(
+        (interface, port),
+        SimpleHTTPRequestHandler,
+        ssl_ctx,
     )
 
     try:
