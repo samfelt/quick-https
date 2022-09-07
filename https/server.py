@@ -114,6 +114,7 @@ def main():
         else:
             verbose_print("Generating new self signed certificate")
             key, cert = HTTPSServer.generate_self_signed_cert()
+            os.makedirs(os.path.dirname(DEFAULT_KEY), exist_ok=True)
             HTTPSServer.write_key_cert(key, DEFAULT_KEY, cert, DEFAULT_CERT)
     else:
         if os.path.isfile(cert_file) and os.path.isfile(key_file):
@@ -123,6 +124,7 @@ def main():
                 "Cert/Key pair does not exist, do you want to generate one?"
             ):
                 key, cert = HTTPSServer.generate_self_signed_cert()
+                os.makedirs(os.path.dirname(DEFAULT_KEY), exist_ok=True)
                 HTTPSServer.write_key_cert(key, key_file, cert, cert_file)
             else:
                 print("Certificate/Key pair required to run")
