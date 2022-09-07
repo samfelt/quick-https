@@ -1,15 +1,12 @@
-# simpleWebServer
+# Quick HTTPS
 
 Expanding on pythons Simple HTTP Server to include HTTPS
 
-## Installing
+## Installation
 
-Right now the module can be installed by cloning this repo and then installing
-it with pip.
+**From PyPI**
 
-    git clone https://github.com/samfelt/simpleWebServer
-    cd simpleWebServer
-    pip install .
+    pip install quick-https
 
 ## Running
 
