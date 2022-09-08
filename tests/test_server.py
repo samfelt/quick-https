@@ -21,7 +21,7 @@ def test_verbose_print(input_msg, input_suppress, expected, capsys):
 
 
 def test_verbose_print_verbose_off(capsys):
-    server.VERBOSE = False 
+    server.VERBOSE = False
     server.verbose_print("TEST")
     captured = capsys.readouterr()
     assert captured.out == ""
