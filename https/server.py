@@ -3,6 +3,7 @@ from cryptography.hazmat.primitives import hashes
 from http.server import SimpleHTTPRequestHandler
 from https import HTTPSServer
 import os
+import sys
 
 
 VERBOSE = False
@@ -29,7 +30,7 @@ def prompt_yn(msg):
         print(f"'{ans}' is not a valid response")
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser()
     cert_group = parser.add_argument_group(
         "Certificate Options",
@@ -74,7 +75,7 @@ def parse_args():
         help="File that holds certificate",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.generate and (args.key or args.cert):
         parser.exit(1, "ERROR: --generate cannot be used with --key/--cert\n")
@@ -92,7 +93,7 @@ def parse_args():
 
 
 def main():
-    args = parse_args()
+    args = parse_args(sys.argv[1:])
 
     if args.verbose:
         global VERBOSE
