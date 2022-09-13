@@ -2,6 +2,7 @@ import argparse
 from cryptography.hazmat.primitives import hashes
 from http.server import SimpleHTTPRequestHandler
 from https import HTTPSServer
+from https import __version__
 import os
 import sys
 
@@ -55,6 +56,9 @@ def parse_args(argv=None):
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Print extra info"
     )
+    parser.add_argument(
+        "--version", action="store_true", help="Print version info"
+    )
 
     cert_group.add_argument(
         "--generate",
@@ -94,6 +98,10 @@ def parse_args(argv=None):
 
 def main():
     args = parse_args(sys.argv[1:])
+
+    if args.version:
+        print(f"quick-https v{__version__}")
+        return 0
 
     if args.verbose:
         global VERBOSE
