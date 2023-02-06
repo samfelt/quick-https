@@ -1,7 +1,7 @@
 import argparse
 from cryptography.hazmat.primitives import hashes
-from http.server import SimpleHTTPRequestHandler
 from https import HTTPSServer
+from https import CustomHTTPRequestHandler
 from https import __version__
 import os
 import sys
@@ -150,7 +150,7 @@ def main():
 
     httpd = HTTPSServer.HTTPSServer(
         (interface, port),
-        SimpleHTTPRequestHandler,
+        CustomHTTPRequestHandler.CustomHTTPRequestHandler,
         key_file,
         cert_file,
     )
