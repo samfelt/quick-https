@@ -4,15 +4,103 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes, serialization
 from datetime import datetime, timedelta
+import io
 from http.server import HTTPServer
+from http.server import SimpleHTTPRequestHandler
 import random
 import ssl
+import cgi
+
+
+upload_file_form = [
+    "<form action='/' method='post' enctype='multipart/form-data'>",
+    "<h3>Upload a File</h3>",
+    "<input type='file' id='choose-file' name='filename'>",
+    "<input type='submit' value='Upload'>",
+    "</form>",
+]
+
+
+class UploadRequestHandler(SimpleHTTPRequestHandler):
+    """
+    Extend the SimpleHTTPHander to add some functionality:
+      * Handle post requests to receive  files to the server
+      * Provide a link or button on the normal page to upload of a file
+    """
+
+    def __init__(self, request, client_address, server):
+        SimpleHTTPRequestHandler.__init__(
+            self, request, client_address, server
+        )
+
+    def do_GET(self, message=""):
+        """
+        Serve a GET request. Extending SimpleHTTPRequestHandler.do_GET
+        If the request is for a directory listing, add a form that will allow
+        the user to upload a file via POST request.
+        """
+        f = self.send_head()
+        # if file: f will be type <class '_io.BufferedReader'>
+        # if dir : f will be type <class '_io.BytesIO'>
+        if type(f) is io.BytesIO:
+            f = self.add_file_upload(f, message=message)
+        if f:
+            try:
+                self.copyfile(f, self.wfile)
+            finally:
+                f.close()
+
+    def add_file_upload(self, stream, message=""):
+        """
+        Take an io.BytesIO stream and add a form to it right after the header
+        (<h1>)
+        """
+        temp = io.BytesIO()
+        for line in stream.readlines():
+            temp.write(line)
+            if line[0:4] == b"<h1>":
+                if message:
+                    temp.write(f"<h4>{message}</h4>\n".encode())
+                for node in upload_file_form:
+                    temp.write(f"{node}\n".encode())
+        temp.seek(0)
+        return temp
+
+    def do_POST(self):
+        res, info = self.deal_post_data()
+        print(f"{res} | {info} by: {self.client_address}")
+        message = "File Uploaded!" if res else "Upload failed"
+        self.do_GET(message=message)
+
+    def deal_post_data(self):
+        """Deal with the data in a POST request."""
+
+        ctype, pdict = cgi.parse_header(self.headers["Content-Type"])
+        if ctype == "multipart/form-data":
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={
+                    "REQUEST_METHOD": "POST",
+                    "CONTENT_TYPE": self.headers["Content-Type"],
+                },
+            )
+            try:
+                with open(f"./{form['filename'].filename}", "wb") as f:
+                    f.write(form["filename"].file.read())
+            except IOError:
+                return (False, "Can't create file, check permissions?")
+        else:
+            return (False, "Content-Type is not multipart/form-data")
+        return (True, "Files Uploaded")
 
 
 class HTTPSServer(HTTPServer):
     """Extend HTTPServer to include HTTPS."""
 
-    def __init__(self, address, handler, key_file, cert_file):
+    def __init__(
+        self, address, key_file, cert_file, handler=SimpleHTTPRequestHandler
+    ):
         """Intialize the HTTPS server.
         Add a fields for key and cert files to generate ssl context.
         """

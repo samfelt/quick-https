@@ -1,7 +1,6 @@
 import argparse
 from cryptography.hazmat.primitives import hashes
 from https import HTTPSServer
-from https import CustomHTTPRequestHandler
 from https import __version__
 import os
 import sys
@@ -52,6 +51,12 @@ def parse_args(argv=None):
         default=8000,
         action="store",
         help="Port to liston on",
+    )
+    parser.add_argument(
+        "--upload",
+        "-u",
+        action="store_true",
+        help="Enable the ability to upload files",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Print extra info"
@@ -148,12 +153,16 @@ def main():
     verbose_print(f"Cert:      {cert.fingerprint(hashes.SHA1()).hex(':',1)}")
     verbose_print("-------------------------------------------------\n", True)
 
-    httpd = HTTPSServer.HTTPSServer(
-        (interface, port),
-        CustomHTTPRequestHandler.CustomHTTPRequestHandler,
-        key_file,
-        cert_file,
-    )
+    if args.upload:
+        verbose_print("Using Upload Request Handler\n")
+        httpd = HTTPSServer.HTTPSServer(
+            (interface, port),
+            key_file,
+            cert_file,
+            HTTPSServer.UploadRequestHandler,
+        )
+    else:
+        httpd = HTTPSServer.HTTPSServer((interface, port), key_file, cert_file)
 
     try:
         print(f"Serving HTTPS on {interface}, port {port}...")
