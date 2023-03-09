@@ -18,6 +18,7 @@ upload_file_form = [
     "<input type='file' id='choose-file' name='filename'>",
     "<input type='submit' value='Upload'>",
     "</form>",
+    "<br>",
 ]
 
 
