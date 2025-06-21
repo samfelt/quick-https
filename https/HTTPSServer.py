@@ -7,9 +7,9 @@ from datetime import datetime, timedelta
 import io
 from http.server import HTTPServer
 from http.server import SimpleHTTPRequestHandler
+from multipart import MultipartParser
 import random
 import ssl
-import cgi
 
 
 upload_file_form = [
@@ -69,31 +69,31 @@ class UploadRequestHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         res, info = self.deal_post_data()
-        print(f"{res} | {info} by: {self.client_address}")
         message = "File Uploaded!" if res else "Upload failed"
+        print(f"{message} | {info} by: {self.client_address}")
         self.do_GET(message=message)
 
     def deal_post_data(self):
         """Deal with the data in a POST request."""
 
-        ctype, pdict = cgi.parse_header(self.headers["Content-Type"])
-        if ctype == "multipart/form-data":
-            form = cgi.FieldStorage(
-                fp=self.rfile,
-                headers=self.headers,
-                environ={
-                    "REQUEST_METHOD": "POST",
-                    "CONTENT_TYPE": self.headers["Content-Type"],
-                },
-            )
+        content_type = self.headers.get("Content-Type", "")
+        if not content_type.startswith("multipart/form-data"):
+            return (False, "Only supports 'mulitpart/form-data'")
+        boundary = content_type.split("boundary=")[-1]
+        content_length = int(self.headers.get("Content-Length", 0))
+
+        parser = MultipartParser(
+            self.rfile, boundary, content_length=content_length
+        )
+        for i, part in enumerate(parser.parts()):
             try:
-                with open(f"./{form['filename'].filename}", "wb") as f:
-                    f.write(form["filename"].file.read())
+                with open(f"./{part.filename}", "wb") as f:
+                    f.write(part.raw)
+            except AttributeError:
+                    return (False, "No 'filename' in POST data")
             except IOError:
-                return (False, "Can't create file, check permissions?")
-        else:
-            return (False, "Content-Type is not multipart/form-data")
-        return (True, "Files Uploaded")
+                    return (False, "Can't create file, check permissions?")
+        return (True, "File Uploaded")
 
 
 class HTTPSServer(HTTPServer):
