@@ -1,7 +1,7 @@
 import argparse
 from cryptography.hazmat.primitives import hashes
-from https import HTTPSServer
-from https import __version__
+from . import HTTPSServer
+from . import __version__
 import os
 import sys
 
